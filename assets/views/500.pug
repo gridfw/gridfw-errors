@@ -1,0 +1,8 @@
+extends layout.pug
+
+append body
+	h1 Error handler
+	div Fatal Error
+	div #{ctx.url}
+	br
+	pre #{error.toString()}
