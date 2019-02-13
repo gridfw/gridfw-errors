@@ -1,6 +1,6 @@
 {
   "name": "gridfw-errors",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Default error manager for gridfw",
   "main": "build/index.js",
   "scripts": {
@@ -31,5 +31,8 @@
     "gulp-uglify-es": "^1.0.4",
     "gulp-util": "^3.0.8"
   },
-  "homepage": "https://github.com/gridfw/gridfw-errors#readme"
+  "homepage": "https://github.com/gridfw/gridfw-errors#readme",
+  "dependencies": {
+    "gridfw-compiler": "^1.0.0"
+  }
 }

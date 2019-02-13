@@ -5,63 +5,40 @@ include			= require "gulp-include"
 uglify			= require('gulp-uglify-es').default
 rename			= require "gulp-rename"
 coffeescript	= require 'gulp-coffeescript'
-PluginError		= gulp.PluginError
-cliTable		= require 'cli-table'
 
+GfwCompiler		= require 'gridfw-compiler'
+
+# compile final values (consts to be remplaced at compile time)
+settings=
+	isProd: gutil.env.hasOwnProperty('prod')
 # compile final values (consts to be remplaced at compile time)
 # handlers
 compileCoffee = ->
 	glp = gulp.src 'assets/**/[!_]*.coffee', nodir: true
 		# include related files
 		.pipe include hardFail: true
+		# template
+		.pipe GfwCompiler.template(settings).on 'error', GfwCompiler.logError
 		# convert to js
-		.pipe coffeescript(bare: true).on 'error', errorHandler
+		.pipe coffeescript(bare: true).on 'error', GfwCompiler.logError
 	# uglify when prod mode
-	if gutil.env.mode is 'prod'
+	if settings.isProd
 		glp = glp.pipe uglify()
 	# save 
 	glp.pipe gulp.dest 'build'
-		.on 'error', errorHandler
-copyViews= ->
-	gulp.src 'assets/views/**/*.pug'
-	.pipe gulp.dest 'build/views/'
-	.on 'error', errorHandler
+		.on 'error', GfwCompiler.logError
+compileViews= ->
+	gulp.src 'assets/views/**/[!_]*.pug'
+		.pipe GfwCompiler.views()
+		.pipe gulp.dest 'build/views/'
+		.on 'error', GfwCompiler.logError
 # watch files
-watch = ->
-	gulp.watch ['assets/**/*.coffee'], compileCoffee
-	gulp.watch ['assets/views/**/*.pug'], copyViews
-	return
-
-# error handler
-errorHandler= (err)->
-	# get error line
-	expr = /:(\d+):(\d+):/.exec err.stack
-	if expr
-		line = parseInt expr[1]
-		col = parseInt expr[2]
-		code = err.code?.split("\n")[line-3 ... line + 3].join("\n")
-	else
-		code = line = col = '??'
-	# Render
-	table = new cliTable()
-	table.push {Name: err.name},
-		{Filename: err.filename},
-		{Message: err.message},
-		{Line: line},
-		{Col: col}
-	console.error table.toString()
-	console.log '\x1b[31mStack:'
-	console.error '\x1b[0m┌─────────────────────────────────────────────────────────────────────────────────────────┐'
-	console.error '\x1b[34m', err.stack
-	console.log '\x1b[0m└─────────────────────────────────────────────────────────────────────────────────────────┘'
-	console.log '\x1b[31mCode:'
-	console.error '\x1b[0m┌─────────────────────────────────────────────────────────────────────────────────────────┐'
-	console.error '\x1b[34m', code
-	console.log '\x1b[0m└─────────────────────────────────────────────────────────────────────────────────────────┘'
+watch = (cb)->
+	unless settings.isProd
+		gulp.watch ['assets/**/*.coffee'], compileCoffee
+		gulp.watch ['assets/views/**/*.pug'], compileViews
+	do cb
 	return
 
 # default task
-if gutil.env.mode is 'prod'
-	gulp.task 'default', gulp.series (gulp.parallel compileCoffee, copyViews)
-else
-	gulp.task 'default', gulp.series (gulp.parallel compileCoffee, copyViews), watch
+gulp.task 'default', gulp.series (gulp.parallel compileCoffee, compileViews), watch
